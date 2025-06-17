@@ -1,0 +1,54 @@
+# Large files (>50MB) - excluded from version control
+dataset/books/Clinical Application Of Mechanical Ventilation - 4th Edition.pdf
+dataset/books/Comprehensive Perinatal and Pediatric Respiratory care 4th edition.pdf
+dataset/books/Egans fundamentals of respiratory care 12th Edition.pdf
+dataset/books/Equipment for respiratory care 2nd Edition.pdf
+dataset/books/Neonatal and pediatric respiratory care 4th edition.pdf
+dataset/books/Neonatal and pediatric respiratory care 5th edition.pdf
+
+# Common Python files to ignore
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

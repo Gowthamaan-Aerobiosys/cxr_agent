@@ -1,122 +1,42 @@
-# CXR Agent Requirements
-# Comprehensive requirements for CXR analysis with agentic RAG
+# Core Dependencies
+python-dotenv>=1.0.0
 
-# Core Python requirements
+# LLM API Clients
+openai>=1.0.0
+anthropic>=0.21.0
+google-genai>=0.3.0
+
+# Machine Learning & Deep Learning
+torch>=2.0.0
+torchvision>=0.15.0
 numpy>=1.21.0
-pandas>=1.3.0
-scipy>=1.7.0
-scikit-learn>=1.0.0
-matplotlib>=3.4.0
-seaborn>=0.11.0
-Pillow>=8.3.0
-opencv-python>=4.5.0
-scikit-image>=0.18.0
+Pillow>=9.0.0
 
-# Deep Learning frameworks
-torch>=1.11.0
-torchvision>=0.12.0
-transformers>=4.21.0
-accelerate>=0.21.0
-bitsandbytes>=0.41.0
-
-# Computer Vision and Medical Imaging
-pydicom>=2.3.0
-nibabel>=4.0.0
-SimpleITK>=2.2.0
-
-# RAG and NLP components
-langchain>=0.0.300
-langchain-community>=0.0.20
-sentence-transformers>=2.2.0
+# RAG & Vector Database
 chromadb>=0.4.0
-pypdf>=3.12.0
-python-docx>=0.8.11
-beautifulsoup4>=4.11.0
-lxml>=4.9.0
+sentence-transformers>=2.2.0
 
-# FastAPI and web components
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
+# Document Processing
+PyMuPDF>=1.23.0  # fitz
+pandas>=1.3.0
+
+# Web Interface
+streamlit>=1.2.0
+
+# MCP Server (Model Context Protocol)
+fastapi>=0.100.0
+uvicorn>=0.23.0
 pydantic>=2.0.0
-python-multipart>=0.0.6
 
-# Streamlit for web UI
-streamlit>=1.28.0
-streamlit-option-menu>=0.3.6
-plotly>=5.15.0
-
-# Async and concurrency
-asyncio-throttle>=1.0.2
+# Async Support
 aiofiles>=23.0.0
+anyio>=4.0.0
 
-# Logging and monitoring
-loguru>=0.7.0
-rich>=13.0.0
+# Utilities
+python-dateutil>=2.8.0
+requests>=2.31.0
 tqdm>=4.65.0
 
-# Configuration and utilities
-python-dotenv>=1.0.0
-pyyaml>=6.0
-click>=8.1.0
-typer>=0.9.0
-
-# Testing
+# Development Tools (Optional)
 pytest>=7.0.0
-pytest-asyncio>=0.21.0
-pytest-cov>=4.0.0
-
-# Development tools
 black>=23.0.0
-flake8>=6.0.0
-mypy>=1.5.0
-pre-commit>=3.0.0
-
-# Medical AI specific
-medpy>=0.4.0
-pyradiomics>=3.0.1
-
-# Optional GPU acceleration
-# torch-audio>=0.11.0  # Uncomment if needed
-# torchaudio>=0.11.0   # Uncomment if needed
-
-# Production deployment
-gunicorn>=21.0.0
-redis>=4.6.0
-celery>=5.3.0
-
-# Database support
-sqlalchemy>=2.0.0
-alembic>=1.12.0
-psycopg2-binary>=2.9.7  # PostgreSQL support
-
-# Monitoring and observability
-prometheus-client>=0.17.0
-grafana-client>=3.5.0
-
-# Security
-cryptography>=41.0.0
-passlib[bcrypt]>=1.7.4
-python-jose[cryptography]>=3.3.0
-
-# File handling
-openpyxl>=3.1.0
-xlsxwriter>=3.1.0
-
-# Network and HTTP
-httpx>=0.25.0
-requests>=2.31.0
-aiohttp>=3.8.0
-
-# Image processing extras
-imageio>=2.31.0
-mahotas>=1.4.13
-
-# Jupyter notebook support (optional)
-jupyter>=1.0.0
-ipykernel>=6.25.0
-ipywidgets>=8.1.0
-
-# Documentation
-sphinx>=7.1.0
-sphinx-rtd-theme>=1.3.0
-myst-parser>=2.0.0

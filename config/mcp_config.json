@@ -1,0 +1,105 @@
+{
+  "server_name": "cxr-agent",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for chest X-ray analysis",
+  
+  "models": {
+    "binary_classifier": {
+      "enabled": true,
+      "checkpoint_path": "weights/binary_classifier.pth",
+      "model_type": "swin_transformer",
+      "description": "Binary classification: Normal vs Abnormal using Swin Transformer"
+    },
+    "multiclass_classifier": {
+      "enabled": true,
+      "checkpoint_path": "weights/fourteen_class_classifier",
+      "num_classes": 14,
+      "model_type": "swin_transformer",
+      "description": "14-class pathology detection (NIH ChestX-ray14) using Swin Transformer"
+    },
+    "segmentation": {
+      "enabled": true,
+      "checkpoint_path": "weights/segmentation_model.pth",
+      "model_type": "unet",
+      "description": "Lung region segmentation"
+    },
+    "rag": {
+      "enabled": true,
+      "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+      "use_tgi": true,
+      "alternative_models": [
+        "Qwen/Qwen2.5-7B-Instruct",
+        "meta-llama/Llama-2-7b-chat-hf"
+      ],
+      "vector_db_path": "rag-pipeline/chroma_db",
+      "documents_path": "dataset/books",
+      "description": "Medical knowledge RAG system with configurable LLM",
+      "config": {
+        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "top_k_default": 5,
+        "max_new_tokens": 2048,
+        "temperature": 0.7,
+        "top_p": 0.9
+      }
+    },
+    "report_generator": {
+      "enabled": false,
+      "model_name": "microsoft/BioGPT",
+      "checkpoint_path": "weights/report_generator.pth",
+      "description": "Radiology report generation",
+      "config": {
+        "max_length": 512,
+        "temperature": 0.7,
+        "top_p": 0.9
+      }
+    },
+    "feature_extractor": {
+      "enabled": true,
+      "model_type": "radiomics",
+      "description": "Quantitative feature extraction"
+    }
+  },
+  
+  "server_config": {
+    "device": "cuda",
+    "fallback_device": "cpu",
+    "cache_models": true,
+    "max_batch_size": 4,
+    "enable_async": true,
+    "log_level": "INFO"
+  },
+  
+  "preprocessing": {
+    "image_size": 224,
+    "normalization": {
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    },
+    "augmentation": {
+      "enabled": false,
+      "rotation_range": 10,
+      "brightness_range": 0.1
+    }
+  },
+  
+  "thresholds": {
+    "binary_classification": 0.5,
+    "multiclass_classification": 0.3,
+    "segmentation_confidence": 0.5
+  },
+  
+  "paths": {
+    "weights_dir": "weights",
+    "output_dir": "outputs",
+    "cache_dir": "cache",
+    "logs_dir": "logs"
+  },
+  
+  "monitoring": {
+    "enable_metrics": true,
+    "metrics_file": "logs/metrics.json",
+    "enable_timing": true
+  }
+}

@@ -1,414 +1,696 @@
-# CXR Agent - Comprehensive Chest X-Ray Analysis System
+# CXR Agent - AI-Powered Chest X-ray Analysis System
 
-A state-of-the-art AI system that combines advanced computer vision techniques with agentic Retrieval-Augmented Generation (RAG) for comprehensive chest X-ray analysis.
+## 🎯 Overview
 
-## 🎯 Features
-
-### 🔬 Advanced Medical Image Analysis
-
-- **Multi-task Classification**: Detect 14+ pathologies including pneumonia, pneumothorax, cardiomegaly, etc.
-- **Lung Segmentation**: Precise segmentation of lung fields and anatomical structures
-- **Feature Extraction**: Comprehensive radiological and morphological feature analysis
-- **Pathology Detection**: Rule-based and AI-powered detection of specific conditions
-
-### � Agentic RAG System
-
-- **Medical Knowledge Base**: Integration with extensive respiratory care literature
-- **Intelligent Query Processing**: Context-aware medical question answering
-- **Clinical Interpretation**: AI-powered interpretation of imaging findings
-- **Evidence-Based Recommendations**: Treatment suggestions based on current medical literature
-
-### 🌐 Scalable Architecture
-
-- **MCP Server**: Model Context Protocol server for enterprise integration
-- **REST API**: Full-featured API for programmatic access
-- **CLI Interface**: Command-line tools for batch processing and automation
-- **Web Interface**: User-friendly web dashboard (via Streamlit)
-
-## � Project Structure
-
-```
-CXR Agent/
-├── lung_tools/                    # Core image analysis modules
-│   ├── __init__.py
-│   ├── image_processor.py         # Image preprocessing and utilities
-│   ├── classifier.py              # Multi-pathology classification
-│   ├── segmentation.py            # Lung segmentation
-│   ├── feature_extractor.py       # Comprehensive feature extraction
-│   └── pathology_detector.py      # Advanced pathology detection
-├── rag-pipeline/                  # Agentic RAG system
-│   ├── config.py                  # Configuration management
-│   ├── qwen_agent.py             # QWEN model integration
-│   ├── document_processor.py      # Document processing
-│   ├── main.py                   # RAG pipeline main
-│   └── streamlit_app.py          # Web interface
-├── dataset/books/                 # Medical literature corpus
-├── cxr_agent.py                  # Main CXR Agent integration
-├── mcp_server.py                 # MCP server implementation
-├── cxr_cli.py                    # Command-line interface
-├── setup.py                      # Setup and installation script
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file
-```
+**CXR Agent** provides a single, conversational interface where users interact with one LLM that intelligently orchestrates all capabilities. Users can upload chest X-rays, ask questions, or do both - the LLM automatically determines what's needed and coordinates the appropriate models.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Python 3.8+
-- CUDA-compatible GPU (recommended)
-- 16GB+ RAM
-- 50GB+ storage space
-
 ### Installation
 
-1. **Clone the repository**
-
 ```bash
+# Clone the repository
 git clone <repository-url>
-cd "CXR Agent"
+cd CXR-Agent
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-2. **Run the setup script**
+### Running the Agent
+
+**Option 1: Web Interface (Recommended)**
 
 ```bash
-python setup.py
+python main.py --ui
+# or simply
+python main.py
 ```
 
-3. **Configure the system**
+This starts the Streamlit web interface at http://localhost:8501
+
+**Option 2: Interactive CLI**
 
 ```bash
-cp .env.template .env
-# Edit .env with your configurations
+python main.py --cli
 ```
 
-4. **Place medical documents**
-   Place your medical literature PDF files in `dataset/books/`
+This starts an interactive terminal session where you can chat with the agent.
 
-5. **Initialize the RAG system**
-   python main.py --query "What are PEEP settings for ARDS?"
-
-````
-
-### 3. Web Interface
-
-Visit `http://localhost:8501` after running the GUI mode for an interactive chat interface with:
-
-- Real-time responses from medical literature
-- Source attribution and relevance scoring
-- Query analysis and concept detection
-- Conversation history
-
-## Architecture
-
-The system implements an agentic RAG (Retrieval-Augmented Generation) pipeline:
-
-1. **Document Processing**: Extracts and chunks text from medical PDFs
-2. **Vector Storage**: Creates searchable embeddings using ChromaDB
-3. **Intent Analysis**: Analyzes queries for medical concepts and urgency
-4. **Context Retrieval**: Finds relevant passages from medical literature
-5. **Response Generation**: Uses QWEN 2.5 to generate evidence-based answers
-
-## Medical Disclaimer
-
-⚠️ **IMPORTANT**: This AI assistant provides educational information only. Always consult with qualified healthcare professionals for patient-specific medical decisions.
-
-## 📚 Documentation
-
-Comprehensive documentation is available in the `/docs` directory, including:
-
-- Installation guide
-- Configuration details
-- API documentation
-- Usage examples
-- Troubleshooting tips
-
-## 🚧 Troubleshooting
-
-Common issues and solutions:
-
-- **Installation errors**: Ensure all prerequisites are met, and follow the installation guide closely.
-- **CUDA errors**: Check CUDA installation and compatibility with your GPU.
-- **API not starting**: Ensure no other services are using the same port, and check the logs for errors.
-- **Model loading issues**: Verify the model path and permissions.
-
-For unresolved issues, please create an issue on GitHub with detailed information about your problem.
-
-## 💻 Usage
-
-### Command Line Interface
-
-#### Analyze a single CXR image
-```bash
-python cxr_cli.py analyze path/to/image.jpg -o results/
-````
-
-#### Batch analysis
+**Option 3: MCP Server**
 
 ```bash
-python cxr_cli.py batch path/to/images/ -o results/
+python main.py --mcp
 ```
 
-#### Query medical knowledge
+This starts the Model Context Protocol server for integration with other tools.
+
+**Option 4: Demo Mode**
 
 ```bash
-python cxr_cli.py query "What are the signs of pneumonia on chest X-ray?"
+python main.py --demo
 ```
 
-#### Check system status
+This runs example queries to demonstrate the agent's capabilities.
 
-```bash
-python cxr_cli.py status
+## 📁 Project Structure
+
 ```
-
-### MCP Server (API)
-
-#### Start the server
-
-```bash
-python mcp_server.py --host 0.0.0.0 --port 8000
-```
-
-#### API Endpoints
-
-- `POST /analyze` - Analyze single CXR image
-- `POST /batch_analyze` - Batch analysis
-- `POST /upload_analyze` - Upload and analyze
-- `POST /query` - Medical knowledge queries
-- `GET /status` - System status
-- `GET /health` - Health check
-
-#### Example API usage
-
-```python
-import requests
-
-# Analyze image
-response = requests.post('http://localhost:8000/analyze', json={
-    'image_path': 'path/to/image.jpg',
-    'include_rag': True,
-    'generate_report': True
-})
-
-results = response.json()
-```
-
-### Web Interface
-
-Start the Streamlit web interface:
-
-```bash
-cd rag-pipeline
-streamlit run streamlit_app.py
-```
-
-Access at `http://localhost:8501`
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Model Configuration
-QWEN_MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
-LOAD_IN_4BIT=true
-MAX_NEW_TOKENS=2048
-
-# Vector Store
-COLLECTION_NAME=respiratory_care_docs
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-
-# Server
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
-```
-
-### Configuration File
-
-Edit `configs/default_config.json` for detailed configuration:
-
-```json
-{
-  "model": {
-    "model_name": "Qwen/Qwen2.5-7B-Instruct",
-    "load_in_4bit": true,
-    "max_new_tokens": 2048,
-    "temperature": 0.7
-  },
-  "document": {
-    "chunk_size": 1000,
-    "chunk_overlap": 200
-  },
-  "vector_store": {
-    "collection_name": "respiratory_care_docs",
-    "embedding_model": "all-MiniLM-L6-v2"
-  }
-}
+CXR Agent/
+├── main.py                      # Main entry point - run this!
+├── requirements.txt             # Python dependencies
+├── README.md                    # This file
+│
+├── src/                         # Source code
+│   ├── __init__.py
+│   ├── agent.py                 # Unified Agent orchestrator
+│   │
+│   ├── models/                  # AI model adapters
+│   │   ├── __init__.py
+│   │   ├── adapters.py          # Model adapter implementations
+│   │   └── registry.py          # Model registry and management
+│   │
+│   ├── rag/                     # RAG pipeline for medical Q&A
+│   │   ├── __init__.py
+│   │   ├── llm_engine.py        # LLM interface (DeepSeek, etc.)
+│   │   ├── document_processor.py # PDF processing & vectorization
+│   │   ├── config.py            # RAG configuration
+│   │   └── utils.py             # Utility functions
+│   │
+│   ├── web/                     # Web interface
+│   │   ├── __init__.py
+│   │   └── app.py               # Streamlit application
+│   │
+│   └── servers/                 # Server implementations
+│       ├── __init__.py
+│       └── mcp_server.py        # Model Context Protocol server
+│
+├── config/                      # Configuration files
+│   ├── mcp_config.json          # MCP server configuration
+│   └── mcp_config.template.json # Template for configuration
+│
+├── examples/                    # Example scripts
+│   └── basic_usage.py           # Programmatic usage examples
+│
+├── weights/                     # Model weights (download separately)
+│   ├── binary_classifier.pth
+│   └── fourteen_class_classifier/
+│
+├── dataset/                     # Medical literature
+│   └── books/                   # PDF medical textbooks
+│
+└── rag_pipeline/                # Legacy RAG data (kept for compatibility)
+    └── chroma_db/               # Vector database
 ```
 
 ## 🏗️ Architecture
 
-### Core Components
-
-1. **Image Processing Pipeline**
-
-   - Preprocessing and normalization
-   - Enhancement and noise reduction
-   - ROI extraction and preparation
-
-2. **AI Analysis Engine**
-
-   - DenseNet-121 based classification
-   - U-Net segmentation
-   - Multi-modal pathology detection
-
-3. **Agentic RAG System**
-
-   - QWEN 2.5 language model
-   - ChromaDB vector store
-   - Intelligent query processing
-
-4. **MCP Server**
-   - FastAPI-based REST API
-   - Async processing
-   - Batch analysis support
-
-### Data Flow
-
 ```
-CXR Image → Preprocessing → Classification ↘
-                        → Segmentation    → Feature Extraction → Pathology Detection
-                        → Enhancement    ↗                            ↓
-                                                              RAG Analysis → Clinical Report
+┌─────────────────────────────────────────────────────────┐
+│                    USER                                  │
+│          (Single Chat Interface)                         │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│              UNIFIED AGENT                               │
+│         (LLM-Based Orchestrator)                         │
+│                                                          │
+│  • Analyzes user intent                                 │
+│  • Determines required models                           │
+│  • Coordinates execution                                │
+│  • Combines results                                     │
+│  • Generates unified response                           │
+└─────────┬──────────────────────────┬────────────────────┘
+          │                          │
+          ▼                          ▼
+┌──────────────────┐      ┌──────────────────┐
+│  VISION MODELS   │      │   LLM + RAG      │
+│                  │      │                  │
+│  • Binary        │      │  • DeepSeek R1   │
+│  • Multi-class   │      │  • Vector Store  │
+│  • Swin Large    │      │  • Med Lit.      │
+└──────────────────┘      └──────────────────┘
 ```
 
-## 📊 Supported Pathologies
+## � Usage Examples
 
-- Atelectasis
-- Cardiomegaly
-- Effusion (Pleural)
-- Infiltration
-- Mass
-- Nodule
-- Pneumonia
-- Pneumothorax
-- Consolidation
-- Edema (Pulmonary)
-- Emphysema
-- Fibrosis
-- Pleural Thickening
-- Hernia
+### Web Interface
 
-## 🎯 Performance
+1. Start the application:
 
-### Classification Metrics
+   ```bash
+   python main.py --ui
+   ```
 
-- Multi-label AUC: 0.85+ (target)
-- Sensitivity: 0.80+ per pathology
-- Specificity: 0.90+ per pathology
+2. Open your browser to http://localhost:8501
 
-### Processing Speed
+3. Interact with the agent:
+   - Type questions: "What are signs of pneumonia?"
+   - Upload X-rays and ask: "Is this normal?"
+   - Follow up: "What's the treatment?"
 
-- Single image analysis: ~30-60 seconds
-- Batch processing: ~1000 images/hour
-- Real-time API response: <2 minutes
-
-### Resource Requirements
-
-- GPU: 8GB+ VRAM (recommended)
-- CPU: 16GB+ RAM
-- Storage: 2GB+ per 1000 processed images
-
-## 🔒 Security & Compliance
-
-- **Data Privacy**: No data persistence by default
-- **HIPAA Consideration**: Configurable for healthcare compliance
-- **Audit Logging**: Comprehensive analysis tracking
-- **API Security**: Token-based authentication support
-
-## 🧪 Testing
-
-Run the test suite:
+### CLI Mode
 
 ```bash
-cd rag-pipeline
-python -m pytest tests/ -v
+python main.py --cli
 ```
 
-## 📝 Clinical Disclaimer
+Then interact:
 
-⚠️ **IMPORTANT MEDICAL DISCLAIMER**
+```
+💬 You: What are the radiological signs of pneumonia?
+🤖 Agent: [Provides detailed answer with medical references]
 
-This system is designed for **educational and research purposes only**. It is **NOT intended for clinical diagnosis or treatment decisions**.
+💬 You: upload path/to/xray.jpg
+🤖 Agent: [Analyzes the image]
 
-- All AI-generated findings must be validated by qualified radiologists
-- Clinical correlation with patient history is essential
-- This tool should not replace professional medical judgment
-- Not approved for clinical use without proper validation
+💬 You: What diseases do you detect?
+🤖 Agent: [Provides analysis based on the uploaded image]
+```
+
+### Programmatic Usage
+
+```python
+import asyncio
+from src.agent import UnifiedAgent
+from src.rag.llm_engine import LLMEngine
+from src.rag.document_processor import VectorStore
+
+async def analyze():
+    # Initialize components
+    config = {
+        "models": {
+            "binary_classifier": {
+                "enabled": True,
+                "checkpoint_path": "weights/binary_classifier.pth",
+                "model_type": "swin_transformer"
+            },
+            "multiclass_classifier": {
+                "enabled": True,
+                "checkpoint_path": "weights/fourteen_class_classifier",
+                "num_classes": 14,
+                "model_type": "swin_transformer"
+            },
+            "rag": {
+                "enabled": True,
+                "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+                "use_tgi": True
+            }
+        },
+        "device": "cuda"
+    }
+
+    agent = UnifiedAgent(config)
+
+    # Ask a question
+    response = await agent.process_message(
+        query="What are signs of pneumonia?"
+    )
+    print(response['answer'])
+
+    # Analyze an image
+    response = await agent.process_message(
+        query="Is this X-ray normal?",
+        image_path="path/to/xray.jpg"
+    )
+    print(response['answer'])
+
+asyncio.run(analyze())
+```
+
+See `examples/basic_usage.py` for more examples.
+
+## 🔑 Key Features
+
+### 1. **Intelligent Intent Detection**
+
+Automatically determines if user wants:
+
+- Image analysis only
+- Medical knowledge only
+- Combined analysis
+- Follow-up on previous image
+
+### 2. **Lazy Model Loading**
+
+Vision models load only when needed:
+
+- First image query → loads models
+- Subsequent questions → uses cached models
+- Pure Q&A → never loads vision models
+
+### 3. **Context Management**
+
+Remembers conversation history and image context:
+
+- "What about that X-ray?" → Uses previous image
+- Multi-turn conversations
+- Contextual follow-ups
+
+## 🆕 What's New?
+
+### Organized Project Structure
+
+- ✅ Clean separation of concerns
+- ✅ Modular architecture
+- ✅ Easy to extend and maintain
+
+### Single Entry Point
+
+- ✅ One `main.py` file to run everything
+- ✅ Multiple modes (UI, CLI, MCP, Demo)
+- ✅ Simple command-line interface
+
+### Better Import Management
+
+- ✅ Proper Python package structure
+- ✅ Relative imports
+- ✅ No path manipulation needed
+
+## 🚀 Quick Start (Recommended)
+
+1. **Install dependencies:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run the agent:**
+   ```bash
+   python main.py
+   ```
+
+That's it! The web interface will open at http://localhost:8501
+
+## 💬 Example Interactions
+
+### Example 1: Pure Medical Question
+
+```
+User: "What are the main causes of pleural effusion?"
+
+Agent: [Searches medical literature via RAG]
+       [Generates comprehensive answer with sources]
+```
+
+### Example 2: Image Analysis
+
+```
+User: [Uploads X-ray] "Is this chest X-ray normal or abnormal?"
+
+Agent: [Runs binary classifier]
+       [Runs multi-class classifier]
+       [Combines results with medical knowledge]
+
+Response: "This chest X-ray appears ABNORMAL with 87% confidence.
+           The AI has detected potential Pneumonia (65%) and
+           Pleural Effusion (42%). These findings suggest..."
+```
+
+### Example 3: Combined Query
+
+```
+User: [Uploads X-ray] "What treatment options are available for this?"
+
+Agent: [Analyzes image → Detects Pneumothorax]
+      [Searches medical literature for Pneumothorax treatment]
+      [Generates contextualized answer]
+
+Response: "Based on the detected Pneumothorax in your X-ray,
+          treatment options typically include..."
+```
+
+### Example 4: Follow-up Questions
+
+```
+User: "What's the prognosis?"
+
+Agent: [Uses previous image context]
+      [Searches for prognosis information]
+
+Response: "For Pneumothorax as detected in the previous image..."
+```
+
+## 🎯 How Intent Detection Works
+
+The `UnifiedAgent` automatically analyzes user intent:
+
+| User Input                       | Detected Intent    | Actions Taken              |
+| -------------------------------- | ------------------ | -------------------------- |
+| "What causes ARDS?"              | `medical_question` | → RAG search only          |
+| [Image] + "Is this normal?"      | `image_analysis`   | → Binary classifier        |
+| [Image] + "What diseases?"       | `image_analysis`   | → Multi-class classifier   |
+| [Image] + "Analyze this"         | `image_analysis`   | → Both classifiers         |
+| [Image] + "Treatment options?"   | `combined`         | → Image analysis + RAG     |
+| "What about the previous image?" | `image_question`   | → Use cached context + RAG |
+
+## 📁 New Files
+
+### Core Components
+
+1. **`unified_agent.py`** - Main orchestration logic
+
+   - `UnifiedAgent` class - Central coordinator
+   - Intent analysis
+   - Model routing
+   - Response formatting
+
+2. **`app_unified.py`** - Streamlit UI
+
+   - Single chat interface
+   - Image upload + text input
+   - Conversation history
+   - Real-time responses
+
+3. **`example_unified_agent.py`** - Usage examples
+   - Programmatic API examples
+   - Different query types
+   - Conversation management
+
+## 🔑 Key Features
+
+### 1. **Intelligent Intent Detection**
+
+Automatically determines if user wants:
+
+- Image analysis only
+- Medical knowledge only
+- Combined analysis
+- Follow-up on previous image
+
+### 2. **Lazy Model Loading**
+
+Vision models load only when needed:
+
+```python
+# First image query → loads models
+# Subsequent questions → uses cached models
+# Pure Q&A → never loads vision models
+```
+
+### 3. **Context Preservation**
+
+```python
+agent.process_message("Analyze this X-ray", image="scan.jpg")
+# Later...
+agent.process_message("What's the clinical significance?")
+# ↑ Automatically uses previous image context
+```
+
+### 4. **Query Enhancement**
+
+```python
+# User asks: "What treatment is needed?"
+# With detected Pneumonia in image
+# Enhanced query: "What treatment is needed? Pneumonia"
+# → Better RAG retrieval
+```
+
+### 5. **Unified Response Format**
+
+```python
+{
+    "answer": "The LLM's natural language response",
+    "thinking": "Reasoning process (DeepSeek)",
+    "has_thinking": True,
+    "image_analysis": {
+        "binary": {...},
+        "diseases": {...}
+    },
+    "sources": [
+        {"source": "...", "page": "...", "relevance_score": 0.85}
+    ],
+    "intent": {...},
+    "timestamp": "..."
+}
+```
+
+## 🎨 UI Features
+
+### Streamlit App (`app_unified.py`)
+
+- **Single Chat Input** - Natural conversation flow
+- **Image Upload** - Drag & drop X-rays
+- **Auto-Detection** - LLM figures out what to do
+- **Rich Responses** - Formatted answers with sources
+- **Thinking Display** - See AI reasoning (optional)
+- **Analysis Details** - Show/hide technical results
+- **Quick Examples** - One-click example queries
+- **Conversation History** - Full chat log
+
+## 🔧 Configuration
+
+Use the same `config/mcp_config.json`:
+
+```json
+{
+  "models": {
+    "binary_classifier": {
+      "enabled": true,
+      "checkpoint_path": "weights/binary_classifier.pth",
+      "model_type": "swin_transformer"
+    },
+    "multiclass_classifier": {
+      "enabled": true,
+      "checkpoint_path": "weights/fourteen_class_classifier",
+      "num_classes": 14,
+      "model_type": "swin_transformer"
+    },
+    "rag": {
+      "enabled": true,
+      "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+      "use_tgi": true,
+      "vector_db_path": "rag_pipeline/chroma_db",
+      "documents_path": "dataset/books"
+    }
+  },
+  "device": "cuda"
+}
+```
+
+## 🆚 Comparison: Old vs New
+
+### Old Approach (`app.py`)
+
+```
+User → Tab Selection → Specific Interface → Manual Model Selection
+```
+
+### New Approach (`app_unified.py`)
+
+```
+User → Natural Question → LLM Orchestration → Automatic Routing
+```
+
+| Feature        | Old (app.py)             | New (app_unified.py)                |
+| -------------- | ------------------------ | ----------------------------------- |
+| Interface      | 3 separate tabs          | Single chat window                  |
+| User Action    | Select tab, choose model | Just ask naturally                  |
+| Image Handling | Manual upload per tab    | Upload once, ask multiple questions |
+| Context        | No cross-tab context     | Full conversation context           |
+| LLM Role       | Just Q&A in tab 2        | Central orchestrator for everything |
+| Complexity     | User decides routing     | LLM decides routing                 |
+
+## 📊 Use Cases
+
+### Clinical Workflow
+
+```
+1. Upload patient's CXR
+2. Ask: "Initial assessment?"
+   → Binary + multi-class analysis
+3. Ask: "What's the differential diagnosis?"
+   → RAG search with findings
+4. Ask: "Recommended follow-up?"
+   → Clinical guidelines from literature
+```
+
+### Educational
+
+```
+1. Ask: "What is cardiomegaly?"
+   → RAG explanation
+2. Upload example: "Is this cardiomegaly?"
+   → Image analysis + comparison
+3. Ask: "What other conditions show similar signs?"
+   → RAG search with context
+```
+
+### Research
+
+```
+1. Batch process multiple X-rays
+2. Ask questions about each
+3. Compare findings
+4. Get literature references
+```
+
+## 🔬 Technical Details
+
+### Intent Analysis Algorithm
+
+```python
+def _analyze_user_intent(query, has_image):
+    # Keywords detection
+    if has_image:
+        if "normal" or "abnormal" → binary classifier
+        if "disease" or "detect" → multiclass classifier
+        if general question → combined analysis
+    else:
+        if refers to "this" or "it" → use cached image
+        else → pure RAG query
+```
+
+### Model Loading Strategy
+
+```python
+# Lazy loading - only when needed
+if intent.requires_image_analysis:
+    if not binary_classifier:
+        load_binary_classifier()
+    if not multiclass_classifier:
+        load_multiclass_classifier()
+
+# Models stay in memory for subsequent requests
+```
+
+### Response Generation Pipeline
+
+```
+1. Analyze Intent
+2. Execute Required Models
+   - Image analysis (if needed)
+   - RAG retrieval (if needed)
+3. Format Context for LLM
+4. Generate Unified Prompt
+5. LLM Response Generation
+6. Parse & Format Response
+7. Update Conversation History
+```
+
+## 🐛 Troubleshooting
+
+### Issue: "Models not loading"
+
+```bash
+# Check model paths in config
+# Ensure weights exist:
+ls weights/
+# Should show:
+# - binary_classifier.pth
+# - fourteen_class_classifier/
+```
+
+### Issue: "RAG not working"
+
+```bash
+# Check vector database
+python -c "from rag_pipeline.document_processor import VectorStore; \
+           vs = VectorStore(); print(vs.get_collection_stats())"
+```
+
+### Issue: "Out of memory"
+
+```python
+# Use CPU instead
+config["device"] = "cpu"
+```
+
+## 📝 API Reference
+
+### `UnifiedAgent`
+
+#### `__init__(config, llm_engine, vector_store)`
+
+Initialize the unified agent.
+
+#### `process_message(query, image_path=None)`
+
+Main entry point for all interactions.
+
+**Args:**
+
+- `query` (str): User's question or request
+- `image_path` (str, optional): Path to CXR image
+
+**Returns:**
+
+- Dict with answer, thinking, image_analysis, sources, metadata
+
+#### `get_conversation_history()`
+
+Get all previous interactions.
+
+#### `clear_history()`
+
+Clear conversation history and image context.
+
+#### `get_current_image_context()`
+
+Get cached image analysis (if any).
+
+## 🎓 Best Practices
+
+1. **Natural Language** - Ask as you would ask a doctor
+2. **Context Aware** - Follow-up questions work naturally
+3. **Be Specific** - "What diseases?" vs "Analyze this"
+4. **Use Examples** - Try quick example buttons first
+5. **Check Sources** - Expand to see medical references
+
+## 🚦 Migration Guide
+
+### From `app.py` to `app_unified.py`
+
+**Old Code:**
+
+```python
+# Tab 1 - Load classifier manually
+binary_classifier = load_binary_classifier()
+result = classifier.predict(image)
+
+# Tab 2 - Initialize RAG separately
+rag_system = initialize_rag_system()
+response = rag_system.process_query(query)
+
+# Tab 3 - Combine manually
+binary_result = ...
+rag_result = ...
+# Manual combination
+```
+
+**New Code:**
+
+```python
+# Single unified interface
+agent = UnifiedAgent(config)
+
+# Everything through one method
+response = await agent.process_message(
+    query="Your question",
+    image_path="optional_image.jpg"
+)
+# LLM handles everything
+```
+
+## 📚 Additional Resources
+
+- **Architecture Diagrams**: See `docs/ARCHITECTURE_DIAGRAMS.md`
+- **MCP Server**: See `docs/MCP_SERVER_GUIDE.md`
+- **Deployment**: See `docs/PRODUCTION_DEPLOYMENT.md`
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+The unified agent is designed to be extensible:
 
-### Development Setup
+1. Add new vision models in `model_adapters.py`
+2. Extend intent detection in `unified_agent.py`
+3. Add new LLM models in `qwen_agent.py`
 
-```bash
-pip install -r requirements.txt
-pip install -e .
-pre-commit install
-```
+## ⚠️ Medical Disclaimer
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Medical literature corpus from respiratory care textbooks
-- QWEN 2.5 model by Alibaba Cloud
-- Open-source medical imaging libraries
-- ChromaDB for vector storage
-- FastAPI for web framework
-
-## 📞 Support
-
-For technical support or questions:
-
-- Create an issue on GitHub
-- Check the documentation in `/docs`
-- Review the FAQ section
-
-## 🔄 Version History
-
-### v1.0.0 (Current)
-
-- Initial release
-- Complete CXR analysis pipeline
-- Agentic RAG integration
-- MCP server implementation
-- CLI and web interfaces
-
-## 🚧 Roadmap
-
-### Short Term
-
-- [ ] Enhanced pathology detection algorithms
-- [ ] Additional imaging modalities support
-- [ ] Performance optimizations
-- [ ] Extended test coverage
-
-### Long Term
-
-- [ ] 3D imaging support (CT integration)
-- [ ] Multi-language support
-- [ ] Mobile application
-- [ ] Cloud deployment options
-- [ ] Integration with PACS systems
+This AI provides educational information only. Always consult qualified healthcare professionals for medical decisions.
 
 ---
 
-**Built with ❤️ for advancing medical AI and improving patient care**
+**Made with ❤️ for better medical AI**

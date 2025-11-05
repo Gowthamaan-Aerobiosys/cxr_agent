@@ -78,9 +78,7 @@ def run_cli_mode():
                 },
                 "rag": {
                     "enabled": True,
-                    "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
-                    "use_tgi": True,
-                    "vector_db_path": "rag_pipeline/chroma_db",
+                    "vector_db_path": "chroma_db",
                     "documents_path": "dataset/books"
                 }
             },
@@ -96,11 +94,17 @@ def run_cli_mode():
         # Initialize
         try:
             vector_store = VectorStore(collection_name="respiratory_care_docs")
+            
+            # Determine model from environment
+            import os
+            model_name = os.getenv("GEMINI_MODEL") or os.getenv("GOOGLE_MODEL")
+            
             llm_engine = LLMEngine(
-                model_name=config["models"]["rag"]["model_name"],
-                use_tgi=True,
-                max_new_tokens=2048
+                model_name=model_name,
+                max_tokens=2048,
+                temperature=0.7
             )
+            
             agent = UnifiedAgent(
                 config=config,
                 llm_engine=llm_engine,
@@ -111,9 +115,9 @@ def run_cli_mode():
             logger.error(f"Failed to initialize agent: {e}")
             print(f"\n❌ Error: {e}")
             print("\nNote: Make sure you have:")
-            print("  1. Weights in the weights/ directory")
-            print("  2. RAG documents processed in rag_pipeline/chroma_db")
-            print("  3. Required models accessible (or use_tgi=False)")
+            print("  1. API keys set in .env file")
+            print("  2. Weights in the weights/ directory")
+            print("  3. RAG documents processed in chroma_db/")
             return
         
         print("Commands:")
@@ -203,7 +207,7 @@ def run_demo():
     
     # Import and run the example
     sys.path.insert(0, str(Path(__file__).parent / "examples"))
-    from basic_usage import main as demo_main
+    from examples.basic_usage import main as demo_main
     
     try:
         asyncio.run(demo_main())

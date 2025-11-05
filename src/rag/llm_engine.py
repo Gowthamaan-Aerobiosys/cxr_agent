@@ -4,55 +4,46 @@ import logging
 from datetime import datetime
 import re
 from enum import Enum
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # API clients for different LLM providers
 try:
-    import openai
-except ImportError:
-    openai = None
-
-try:
-    import anthropic
-except ImportError:
-    anthropic = None
-
-try:
-    import google.genai as genai
+    from google import genai
+    from google.genai import types
 except ImportError:
     genai = None
+    types = None
 
 logger = logging.getLogger(__name__)
 
 
 class LLMProvider(Enum):
     """Supported LLM providers"""
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
     GOOGLE = "google"
 
 
 class LLMEngine:
-    """API-based wrapper for external LLM providers (OpenAI, Anthropic, Google)"""
+    """API-based wrapper for Google's Gemini LLM"""
 
     def __init__(
         self,
-        provider: str = "openai",
         model_name: Optional[str] = None,
         api_key: Optional[str] = None,
         max_tokens: int = 2048,
-        temperature: float = 0.7,
-    ):
+        temperature: float = 0.7):
         """
-        Initialize LLM Engine with API-based provider
+        Initialize LLM Engine with Google's Gemini
         
         Args:
-            provider: LLM provider ('openai', 'anthropic', 'gemini')
-            model_name: Specific model name (defaults to recommended for each provider)
+            model_name: Specific model name (defaults to recommended model)
             api_key: API key (if not set via environment variables)
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature (0.0-1.0)
         """
-        self.provider = LLMProvider(provider.lower())
+        self.provider = LLMProvider.GOOGLE
         self.max_tokens = max_tokens
         self.temperature = temperature
         
@@ -67,54 +58,24 @@ class LLMEngine:
         logger.info(f"Initialized {self.provider.value} LLM Engine with model: {self.model_name}")
 
     def _get_default_model(self) -> str:
-        """Get default model for each provider"""
-        defaults = {
-            LLMProvider.OPENAI: "gpt-4-turbo-preview",
-            LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
-            LLMProvider.GOOGLE: "gemini-2.5-pro",
-        }
-        return defaults[self.provider]
+        """Get default model for the provider"""
+        return "gemini-2.5-pro"
 
     def _init_client(self, api_key: Optional[str] = None):
         """Initialize API client for the selected provider"""
-        if self.provider == LLMProvider.OPENAI:
-            if openai is None:
-                raise ImportError("openai package not installed. Run: pip install openai")
-            
-            # Set API key from parameter or environment
-            if api_key:
-                openai.api_key = api_key
-            else:
-                openai.api_key = os.getenv("OPENAI_API_KEY")
-            
-            if not openai.api_key:
-                raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable or pass api_key parameter")
-            
-            self.client = openai.OpenAI(api_key=openai.api_key)
-            
-        elif self.provider == LLMProvider.ANTHROPIC:
-            if anthropic is None:
-                raise ImportError("anthropic package not installed. Run: pip install anthropic")
-            
-            # Get API key from parameter or environment
-            key = api_key or os.getenv("ANTHROPIC_API_KEY")
-            if not key:
-                raise ValueError("Anthropic API key not found. Set ANTHROPIC_API_KEY environment variable or pass api_key parameter")
-            
-            self.client = anthropic.Anthropic(api_key=key)
-            
-        elif self.provider == LLMProvider.GOOGLE:
+        if self.provider == LLMProvider.GOOGLE:
             if genai is None:
-                raise ImportError("google-generativeai package not installed. Run: pip install google-generativeai")
+                raise ImportError("google.generativeai package not installed. Run: pip install google-generativeai")
             
-            # Get API key - try both GEMINI_API_KEY and GOOGLE_API_KEY for backwards compatibility
-            key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-            if not key:
-                raise ValueError("Gemini API key not found. Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable or pass api_key parameter")
+            used_api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
             
-            # Configure Gemini with API key
-            genai.configure(api_key=key)
-            self.client = genai.GenerativeModel(self.model_name)
+            if not used_api_key:
+                raise ValueError("Google API key not found. Set GOOGLE_API_KEY or GEMINI_API_KEY environment variable or pass api_key parameter")
+            
+            self.client = genai.Client(api_key=used_api_key)
+            
+        else:
+            raise ValueError(f"Unsupported LLM provider: {self.provider}")
 
     def format_system_prompt(self) -> str:
         """Create system prompt for respiratory care agent"""
@@ -254,19 +215,14 @@ Please provide a comprehensive answer based on the context provided. If the cont
         else:
             return "medium"
 
-    def generate_response(self, user_prompt: str) -> Dict[str, str]:
-        """Generate response using the selected LLM provider API"""
+    def generate_response(self, user_prompt: str, system_prompt: Optional[str] = None) -> Dict[str, str]:
+        """Generate response using the Google Gemini API"""
         try:
-            system_prompt = self.format_system_prompt()
+            # Use provided system prompt or default
+            if system_prompt is None:
+                system_prompt = self.format_system_prompt()
             
-            if self.provider == LLMProvider.OPENAI:
-                response = self._generate_openai(system_prompt, user_prompt)
-            elif self.provider == LLMProvider.ANTHROPIC:
-                response = self._generate_anthropic(system_prompt, user_prompt)
-            elif self.provider == LLMProvider.GOOGLE:
-                response = self._generate_gemini(system_prompt, user_prompt)
-            else:
-                raise ValueError(f"Unsupported provider: {self.provider}")
+            response = self._generate_gemini(system_prompt, user_prompt)
             
             return {
                 "final_answer": response.strip(),
@@ -283,59 +239,40 @@ Please provide a comprehensive answer based on the context provided. If the cont
                 "has_thinking": False
             }
 
-    def _generate_openai(self, system_prompt: str, user_prompt: str) -> str:
-        """Generate response using OpenAI API"""
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            raise
-
-    def _generate_anthropic(self, system_prompt: str, user_prompt: str) -> str:
-        """Generate response using Anthropic Claude API"""
-        try:
-            response = self.client.messages.create(
-                model=self.model_name,
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ]
-            )
-            return response.content[0].text
-        except Exception as e:
-            logger.error(f"Anthropic API error: {str(e)}")
-            raise
-
     def _generate_gemini(self, system_prompt: str, user_prompt: str) -> str:
         """Generate response using Google Gemini API"""
-        try:
-            # Combine system and user prompts for Gemini
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        if not self.client:
+            raise ValueError("Client not initialized.")
             
-            # Configure generation settings
-            generation_config = genai.types.GenerationConfig(
+        try:            
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=user_prompt),
+                    ],
+                ),
+            ]
+
+            generate_content_config = types.GenerateContentConfig(
                 temperature=self.temperature,
                 max_output_tokens=self.max_tokens,
+                system_instruction=[system_prompt],
+                thinking_config = types.ThinkingConfig(
+                    thinking_budget=-1,
+                ),
+            )
+
+            response_chunks = self.client.models.generate_content_stream(
+                model=self.model_name,
+                contents=contents,
+                config=generate_content_config,
             )
             
-            # Generate response
-            response = self.client.generate_content(
-                full_prompt,
-                generation_config=generation_config
-            )
-            
-            return response.text
+            full_response = "".join(chunk.text for chunk in response_chunks)
+
+            return full_response
+
         except Exception as e:
             logger.error(f"Gemini API error: {str(e)}")
             raise

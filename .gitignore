@@ -55,5 +55,6 @@ logs/
 *.temp
 
 # Model Weights
+checkpoint.*
 weights/binary_classifier.pth
 weights/fourteen_class_classifier

@@ -9,6 +9,7 @@ This module provides a single conversational interface where users can:
 The LLM acts as the central intelligence that routes requests to appropriate models.
 """
 
+import os
 import torch
 import asyncio
 import logging
@@ -60,11 +61,17 @@ class UnifiedAgent:
             self.llm_engine = llm_engine
         else:
             rag_config = config["models"]["rag"]
+            
+            model_name = os.getenv("GEMINI_MODEL") or os.getenv("GOOGLE_MODEL")
+            
+            # Get config values with fallbacks
+            max_tokens = rag_config.get("config", {}).get("max_tokens", 2048)
+            temperature = rag_config.get("config", {}).get("temperature", 0.7)
+            
             self.llm_engine = LLMEngine(
-                model_name=rag_config.get("model_name", "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"),
-                load_in_4bit=False,
-                max_new_tokens=2048,
-                use_tgi=rag_config.get("use_tgi", True)
+                model_name=model_name,
+                max_tokens=max_tokens,
+                temperature=temperature
             )
         
         # Initialize vector store for RAG
@@ -152,11 +159,19 @@ class UnifiedAgent:
             if any(keyword in query_lower for keyword in image_analysis_keywords):
                 intent["requires_image_analysis"] = True
                 
-                if any(keyword in query_lower for keyword in binary_keywords):
+                # Check for both binary and disease keywords
+                has_binary_keywords = any(keyword in query_lower for keyword in binary_keywords)
+                has_disease_keywords = any(keyword in query_lower for keyword in disease_keywords)
+                
+                if has_binary_keywords and has_disease_keywords:
+                    intent["type"] = "image_analysis"
+                    intent["specific_model"] = "both"
+                    intent["question_type"] = "comprehensive"
+                elif has_binary_keywords:
                     intent["type"] = "image_analysis"
                     intent["specific_model"] = "binary"
                     intent["question_type"] = "binary_classification"
-                elif any(keyword in query_lower for keyword in disease_keywords):
+                elif has_disease_keywords:
                     intent["type"] = "image_analysis"
                     intent["specific_model"] = "multiclass"
                     intent["question_type"] = "disease_detection"
@@ -269,18 +284,15 @@ class UnifiedAgent:
         intent: Dict[str, Any],
         image_context: Optional[str] = None,
         rag_context: Optional[List[Dict[str, Any]]] = None
-    ) -> str:
+    ) -> tuple[str, str]:
         """
         Create a unified prompt that combines all contexts
         
-        This prompt gives the LLM:
-        - User's query
-        - Image analysis results (if available)
-        - Medical knowledge from RAG (if needed)
-        - Instructions on how to respond
+        Returns:
+            tuple: (system_prompt, user_prompt)
         """
         
-        system_context = """You are an expert chest X-ray analysis AI assistant with both visual analysis capabilities and deep medical knowledge. You can:
+        system_prompt = """You are an expert chest X-ray analysis AI assistant with both visual analysis capabilities and deep medical knowledge. You can:
 
 1. Analyze chest X-ray images and detect abnormalities and diseases
 2. Provide evidence-based medical information about respiratory conditions
@@ -328,20 +340,9 @@ Guidelines:
         else:
             prompt_parts.append("Please provide a comprehensive, evidence-based answer to the user's medical question.")
         
-        # Format for the specific LLM
-        if self.llm_engine.is_deepseek:
-            # DeepSeek format (no system prompt in messages)
-            full_prompt = system_context + "\n\n" + "\n".join(prompt_parts)
-            full_prompt += "\n\nYou must begin your response with <think> and end the thinking section with </think>. After your thinking, provide your comprehensive answer."
-        else:
-            # Standard format with system prompt
-            full_prompt = f"""<|im_start|>system
-{system_context}<|im_end|>
-<|im_start|>user
-{chr(10).join(prompt_parts)}<|im_end|>
-<|im_start|>assistant"""
+        user_prompt = "\n".join(prompt_parts)
         
-        return full_prompt
+        return system_prompt, user_prompt
     
     async def process_message(
         self, 
@@ -407,7 +408,7 @@ Guidelines:
             rag_context = self.vector_store.search(search_query, n_results=5)
         
         # Step 4: Create unified prompt
-        prompt = self._create_unified_prompt(
+        system_prompt, user_prompt = self._create_unified_prompt(
             user_query=query,
             intent=intent,
             image_context=image_context,
@@ -416,7 +417,7 @@ Guidelines:
         
         # Step 5: Generate LLM response
         logger.info("Generating LLM response...")
-        llm_response = self.llm_engine.generate_response(prompt)
+        llm_response = self.llm_engine.generate_response(user_prompt, system_prompt)
         
         # Step 6: Format final response
         response = self._format_final_response(

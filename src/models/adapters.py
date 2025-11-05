@@ -70,16 +70,16 @@ class BinaryClassifierAdapter(BaseModelAdapter):
                 raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
             
             # Load checkpoint
-            checkpoint = torch.load(str(checkpoint_path), map_location=self.device)
+            checkpoint = torch.load(str(checkpoint_path), map_location=self.device, weights_only=False)
             
             # Extract model (handle different checkpoint formats)
             if isinstance(checkpoint, dict):
                 if 'model' in checkpoint:
                     self.model = checkpoint['model']
-                elif 'state_dict' in checkpoint:
+                elif 'model_state_dict' in checkpoint:
                     # Need to instantiate model first, then load state dict
                     self.model = self._create_model_architecture()
-                    self.model.load_state_dict(checkpoint['state_dict'])
+                    self.model.load_state_dict(checkpoint['model_state_dict'])
                 else:
                     raise ValueError("Checkpoint format not recognized")
             else:
@@ -102,7 +102,7 @@ class BinaryClassifierAdapter(BaseModelAdapter):
         if self.model_type == "swin_transformer":
             import timm
             # Use timm Swin Large model for binary classification
-            model = timm.create_model('swin_large_patch4_window7_224', pretrained=True, num_classes=2)
+            model = timm.create_model('swin_large_patch4_window7_224.ms_in22k_ft_in1k', pretrained=True, num_classes=1)
             return model
         elif self.model_type == "resnet":
             from torchvision.models import resnet50
@@ -135,20 +135,23 @@ class BinaryClassifierAdapter(BaseModelAdapter):
             start_time = time.time()
             with torch.no_grad():
                 outputs = self.model(image_tensor)
-                probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            
+                # Use sigmoid for binary classification from single logit
+                prob = torch.sigmoid(outputs).cpu().numpy()[0][0]
+
             inference_time = time.time() - start_time
-            
-            # Interpret results
-            predicted_class = "Abnormal" if probs[1] > threshold else "Normal"
-            confidence = probs[1] if predicted_class == "Abnormal" else probs[0]
-            
+            if prob > threshold:
+                predicted_class = "Abnormal"
+                confidence = prob
+            else:
+                predicted_class = "Normal"
+                confidence = 1 - prob
+
             return {
                 "prediction": predicted_class,
                 "confidence": float(confidence),
                 "probabilities": {
-                    "Normal": float(probs[0]),
-                    "Abnormal": float(probs[1])
+                    "Normal": float(1 - prob),
+                    "Abnormal": float(prob)
                 },
                 "threshold": threshold,
                 "inference_time_ms": inference_time * 1000,
@@ -209,7 +212,7 @@ class MultiClassClassifierAdapter(BaseModelAdapter):
             if not checkpoint_path.exists():
                 raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
             
-            checkpoint = torch.load(str(checkpoint_path), map_location=self.device)
+            checkpoint = torch.load(str(checkpoint_path), map_location=self.device, weights_only=False)
             
             if isinstance(checkpoint, dict):
                 if 'model' in checkpoint:
@@ -238,7 +241,7 @@ class MultiClassClassifierAdapter(BaseModelAdapter):
         
         if self.model_type == "swin_transformer":
             # Use timm Swin Large model for multi-class classification
-            model = timm.create_model('swin_large_patch4_window7_224', pretrained=True, num_classes=self.num_classes)
+            model = timm.create_model('swin_large_patch4_window7_224.ms_in22k_ft_in1k', pretrained=True, num_classes=self.num_classes)
             return model
         else:
             # Fallback to DenseNet if specified
@@ -282,7 +285,8 @@ class MultiClassClassifierAdapter(BaseModelAdapter):
             start_time = time.time()
             with torch.no_grad():
                 outputs = self.model(image_tensor)
-                probs = outputs.cpu().numpy()[0]  # Already sigmoid in model
+                # Apply softmax for multi-class classification
+                probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
             
             inference_time = time.time() - start_time
             

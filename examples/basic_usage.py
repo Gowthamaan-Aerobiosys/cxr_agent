@@ -39,7 +39,7 @@ async def main():
             "rag": {
                 "enabled": True,
                 # LLM Provider: 'openai', 'anthropic', or 'gemini'
-                "llm_provider": os.getenv("LLM_PROVIDER", "openai"),
+                "llm_provider": os.getenv("LLM_PROVIDER", "google"),
                 # Model name (optional, uses defaults if not specified)
                 "model_name": os.getenv("LLM_MODEL_NAME", None),
                 # API key (optional, reads from environment if not specified)
@@ -61,7 +61,6 @@ async def main():
     # Initialize components
     vector_store = VectorStore(collection_name="respiratory_care_docs")
     llm_engine = LLMEngine(
-        provider=config["models"]["rag"]["llm_provider"],
         model_name=config["models"]["rag"]["model_name"],
         api_key=config["models"]["rag"]["api_key"],
         max_tokens=config["models"]["rag"]["max_tokens"],
@@ -103,7 +102,7 @@ async def main():
     print("=" * 80)
     
     # Note: Replace with actual image path
-    image_path = "path/to/your/chest_xray.jpg"
+    image_path = "D:\\3-Clients\\Aerobiosys\\CXR Agent\\examples\\images\\01.jpg"
     
     response = await agent.process_message(
         query="Is this chest X-ray normal or abnormal? What diseases can you detect?",
@@ -118,12 +117,26 @@ async def main():
         binary = response['image_analysis'].get('binary')
         if binary:
             print(f"   Binary Classification: {binary['prediction']} ({binary['confidence']:.1%})")
+            if 'probabilities' in binary:
+                print(f"      • Normal: {binary['probabilities']['Normal']:.1%}")
+                print(f"      • Abnormal: {binary['probabilities']['Abnormal']:.1%}")
         
         diseases = response['image_analysis'].get('diseases')
-        if diseases and diseases.get('detected_diseases'):
-            print(f"   Detected Diseases:")
-            for disease, prob in diseases['detected_diseases'].items():
-                print(f"      - {disease}: {prob:.1%}")
+        if diseases:
+            detected = diseases.get('detected_diseases', {})
+            if detected:
+                print(f"\n   Detected Diseases ({len(detected)}):")
+                for disease, prob in detected.items():
+                    print(f"      - {disease}: {prob:.1%}")
+            else:
+                print(f"\n   Multi-class Classification: No specific diseases detected above threshold")
+                # Show top probabilities even if below threshold
+                all_probs = diseases.get('all_predictions', {})
+                if all_probs:
+                    top_3 = sorted(all_probs.items(), key=lambda x: x[1], reverse=True)[:3]
+                    print(f"      Top 3 probabilities:")
+                    for disease, prob in top_3:
+                        print(f"         • {disease}: {prob:.1%}")
     
     print(f"\n🤖 Answer:\n{response['answer']}")
     print("\n")
@@ -170,20 +183,7 @@ async def main():
     print("=" * 80)
 
 
-if __name__ == "__main__":
-    print("""
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                                                              ║
-    ║        CXR Agent - Unified Conversational Interface         ║
-    ║                                                              ║
-    ║  A single LLM-powered interface for:                        ║
-    ║  • Chest X-ray analysis                                     ║
-    ║  • Medical knowledge Q&A                                    ║
-    ║  • Combined image + knowledge queries                       ║
-    ║                                                              ║
-    ╚══════════════════════════════════════════════════════════════╝
-    """)
-    
+if __name__ == "__main__":    
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

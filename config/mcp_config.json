@@ -25,21 +25,16 @@
     },
     "rag": {
       "enabled": true,
-      "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
-      "use_tgi": true,
-      "alternative_models": [
-        "Qwen/Qwen2.5-7B-Instruct",
-        "meta-llama/Llama-2-7b-chat-hf"
-      ],
-      "vector_db_path": "rag-pipeline/chroma_db",
+      "vector_db_path": "chroma_db",
       "documents_path": "dataset/books",
-      "description": "Medical knowledge RAG system with configurable LLM",
+      "model_name": "gemini-2.5-pro",
+      "description": "Medical knowledge RAG system with API-based LLM",
       "config": {
         "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
         "chunk_size": 512,
         "chunk_overlap": 50,
         "top_k_default": 5,
-        "max_new_tokens": 2048,
+        "max_tokens": 2048,
         "temperature": 0.7,
         "top_p": 0.9
       }

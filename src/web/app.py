@@ -34,39 +34,57 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS
+# Custom CSS for modern UI
 st.markdown("""
 <style>
+    /* General body styling */
+    body {
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        background-color: #f0f2f6;
+    }
+
+    /* Main header */
     .main-header {
         font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-weight: 700;
+        color: #1a73e8;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
+
+    /* Subtitle */
     .subtitle {
         text-align: center;
-        color: #666;
-        font-size: 1.1rem;
+        color: #5f6368;
+        font-size: 1.2rem;
         margin-bottom: 2rem;
     }
-    .chat-message {
-        padding: 1rem;
-        border-radius: 0.5rem;
+
+    /* Styling for Streamlit's chat messages */
+    [data-testid="stChatMessage"] {
+        padding: 1.5rem;
+        border-radius: 1rem;
         margin-bottom: 1rem;
-        border-left: 4px solid #1f77b4;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    .user-message {
+
+    /* User message styling */
+    [data-testid="stChatMessage"]:has([data-testid="stMarkdownContainer"] p:first-child:contains("You:")) {
         background-color: #e3f2fd;
-        border-left-color: #2196f3;
+        border-left: 5px solid #1a73e8;
     }
-    .assistant-message {
-        background-color: #f5f5f5;
-        border-left-color: #4caf50;
+
+    /* Assistant message styling */
+    [data-testid="stChatMessage"]:has([data-testid="stMarkdownContainer"] p:first-child:contains("CXR Agent:")) {
+        background-color: #ffffff;
+        border-left: 5px solid #34a853;
     }
+
+    /* Thinking process section */
     .thinking-section {
-        background-color: #fff8e1;
-        border: 1px solid #ffc107;
+        background-color: #f3f4f6;
+        border: 1px solid #d1d5db;
         border-radius: 0.5rem;
         padding: 1rem;
         margin: 1rem 0;
@@ -74,37 +92,53 @@ st.markdown("""
         font-size: 0.9rem;
         max-height: 300px;
         overflow-y: auto;
+        color: #1f2937;
+    }
+
+    /* Analysis and disease boxes */
+    .analysis-box, .disease-box {
+        padding: 1rem;
+        border-radius: 0.75rem;
+        margin: 0.5rem 0;
+        border-left-width: 5px;
+        border-left-style: solid;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .analysis-box {
         background-color: #e8f5e9;
-        border-left: 4px solid #4caf50;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 0.5rem 0;
+        border-left-color: #4caf50;
+        color: #1b5e20;
     }
     .disease-box {
         background-color: #ffebee;
-        border-left: 4px solid #f44336;
+        border-left-color: #f44336;
+        color: #c62828;
+    }
+
+    /* Source card styling */
+    .source-card {
+        background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 0.5rem 0;
+        border-left: 4px solid #2196f3;
+        font-size: 0.95rem;
+        color: #343a40;
+        transition: all 0.2s ease-in-out;
     }
-    .source-card {
-        background-color: #f9f9f9;
-        padding: 0.5rem;
-        border-radius: 0.3rem;
-        margin: 0.3rem 0;
-        border-left: 3px solid #2196f3;
-        font-size: 0.9rem;
+    .source-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
+
+    /* Image preview in chat */
     .image-preview {
-        border: 2px solid #ddd;
-        border-radius: 0.5rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 0.75rem;
         padding: 0.5rem;
-        margin: 1rem 0;
-    }
-    .stTextInput > div > div > input {
-        font-size: 1.1rem;
+        margin-top: 1rem;
+        background-color: #ffffff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -133,9 +167,7 @@ def load_config():
                 },
                 "rag": {
                     "enabled": True,
-                    "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
-                    "use_tgi": True,
-                    "vector_db_path": "rag_pipeline/chroma_db",
+                    "vector_db_path": "chroma_db",
                     "documents_path": "dataset/books"
                 }
             },
@@ -167,24 +199,10 @@ def initialize_unified_agent(config):
         # Initialize LLM engine
         rag_config = config["models"]["rag"]
         
-        # Determine provider and model from config or environment
-        # Default to OpenAI if API key is available
-        provider = os.getenv("LLM_PROVIDER", "google")
-        model_name = None  # Will use default for each provider
-        
-        # Check for API keys and select provider accordingly
-        if os.getenv("OPENAI_API_KEY"):
-            provider = "openai"
-            model_name = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
-        elif os.getenv("ANTHROPIC_API_KEY"):
-            provider = "anthropic"
-            model_name = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
-        elif os.getenv("GEMINI_API_KEY"):
-            provider = "google"
-            model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
-        
+        # The LLM Engine is now specific to Google Gemini
+        model_name = config["models"]["rag"].get("model_name") or os.getenv("GEMINI_MODEL")
+
         llm_engine = LLMEngine(
-            provider=provider,
             model_name=model_name,
             max_tokens=2048,
             temperature=0.7
@@ -245,61 +263,52 @@ def display_image_analysis(analysis: dict):
 
 
 def display_message(message: dict, show_thinking: bool = True):
-    """Display a chat message"""
+    """Display a chat message using Streamlit's native chat elements."""
     
-    if message["role"] == "user":
-        st.markdown(f"""
-            <div class="chat-message user-message">
-                <strong>👤 You:</strong><br>
-                {message["content"]}
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Show image if present
-        if message.get("image_path"):
-            try:
-                image = Image.open(message["image_path"])
-                st.image(image, caption="Uploaded X-ray", width=300)
-            except:
-                pass
+    role = message["role"]
+    avatar = "👤" if role == "user" else "🤖"
     
-    else:  # assistant
-        response = message["content"]
+    with st.chat_message(role, avatar=avatar):
+        # Display content
+        st.markdown(f"**{'You' if role == 'user' else 'CXR Agent'}:**")
         
-        # Show image analysis if present
-        if "image_analysis" in response and response["image_analysis"]:
-            display_image_analysis(response["image_analysis"])
+        if role == "user":
+            st.markdown(message["content"])
+            if message.get("image_path"):
+                try:
+                    image = Image.open(message["image_path"])
+                    st.image(image, caption="Uploaded X-ray", width=200, clamp=True)
+                except Exception as e:
+                    logger.warning(f"Could not display user image: {e}")
         
-        # Show thinking process
-        if show_thinking and response.get("has_thinking") and response.get("thinking"):
-            with st.expander("🧠 AI Reasoning Process", expanded=False):
-                thinking_text = response['thinking'].replace('\n', '<br>')
-                st.markdown(f"""
-                    <div class="thinking-section">
-                        {thinking_text}
-                    </div>
-                """, unsafe_allow_html=True)
-        
-        # Show main answer
-        st.markdown(f"""
-            <div class="chat-message assistant-message">
-                <strong>🤖 CXR Agent:</strong><br><br>
-                {response['answer']}
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Show sources if available
-        if response.get("sources") and len(response["sources"]) > 0:
-            with st.expander(f"📚 Medical References ({len(response['sources'])})", expanded=False):
-                for i, source in enumerate(response["sources"], 1):
-                    relevance = source.get("relevance_score", 0)
-                    st.markdown(f"""
-                        <div class="source-card">
-                            <strong>Source {i}:</strong> {source['source']}<br>
-                            <strong>Page:</strong> {source['page']}<br>
-                            <strong>Relevance:</strong> {relevance:.1%}
-                        </div>
-                    """, unsafe_allow_html=True)
+        else:  # Assistant
+            response = message["content"]
+            
+            # Show image analysis if present
+            if "image_analysis" in response and response["image_analysis"]:
+                display_image_analysis(response["image_analysis"])
+            
+            # Show thinking process
+            if show_thinking and response.get("has_thinking") and response.get("thinking"):
+                with st.expander("🧠 AI Reasoning Process", expanded=False):
+                    thinking_text = response['thinking'].replace('\n', '<br>')
+                    st.markdown(f'<div class="thinking-section">{thinking_text}</div>', unsafe_allow_html=True)
+            
+            # Show main answer
+            st.markdown(response.get('answer', ''))
+            
+            # Show sources if available
+            if response.get("sources") and len(response["sources"]) > 0:
+                with st.expander(f"📚 Medical References ({len(response['sources'])})", expanded=False):
+                    for i, source in enumerate(response["sources"], 1):
+                        relevance = source.get("relevance_score", 0)
+                        st.markdown(f"""
+                            <div class="source-card">
+                                <strong>Source {i}:</strong> {source['source']}<br>
+                                <strong>Page:</strong> {source['page']}<br>
+                                <strong>Relevance:</strong> {relevance:.1%}
+                            </div>
+                        """, unsafe_allow_html=True)
 
 
 def main():
@@ -319,9 +328,7 @@ def main():
         
         # Model selection
         llm_options = [
-            "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
-            "Qwen/Qwen2.5-7B-Instruct",
-            "meta-llama/Llama-2-7b-chat-hf"
+            "gemini-2.5-pro"
         ]
         selected_llm = st.selectbox(
             "Language Model:",
@@ -340,33 +347,6 @@ def main():
         
         st.markdown("---")
         
-        # Display settings
-        show_thinking = st.checkbox(
-            "Show AI Reasoning",
-            value=st.session_state.get("show_thinking", True),
-            help="Display the model's thinking process (for DeepSeek)"
-        )
-        st.session_state.show_thinking = show_thinking
-        
-        show_analysis_details = st.checkbox(
-            "Show Analysis Details",
-            value=st.session_state.get("show_analysis", True),
-            help="Show detailed image analysis results"
-        )
-        st.session_state.show_analysis = show_analysis_details
-        
-        st.markdown("---")
-        
-        # Quick actions
-        st.header("🚀 Quick Actions")
-        if st.button("🗑️ Clear Chat", use_container_width=True):
-            st.session_state.messages = []
-            if "agent" in st.session_state and st.session_state.agent:
-                st.session_state.agent.clear_history()
-            st.rerun()
-        
-        st.markdown("---")
-        
         # Capabilities
         st.header("🎯 Capabilities")
         st.markdown("""
@@ -379,19 +359,6 @@ def main():
         """)
         
         st.markdown("---")
-        
-        # Example queries
-        st.header("💬 Try asking:")
-        example_queries = [
-            "What are signs of pneumonia?",
-            "Explain PEEP settings in ARDS",
-            "How to interpret cardiomegaly?",
-            "What causes pleural effusion?",
-            "Ventilator weaning protocols"
-        ]
-        for query in example_queries:
-            if st.button(query, key=f"example_{query}", use_container_width=True):
-                st.session_state.selected_example = query
     
     # Initialize agent
     if "agent" not in st.session_state:
@@ -408,90 +375,89 @@ def main():
     
     # Display chat history
     for message in st.session_state.messages:
-        display_message(message, show_thinking=st.session_state.show_thinking)
-    
-    # Image upload section
+        display_message(message)
+
+    # --- Chat Input and File Uploader at the bottom ---
     st.markdown("---")
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        uploaded_file = st.file_uploader(
-            "📤 Upload Chest X-ray (optional)",
-            type=['png', 'jpg', 'jpeg', 'dcm'],
-            help="Upload a CXR image to analyze it along with your question",
-            key="image_upload"
-        )
-    
-    with col2:
-        if uploaded_file:
-            st.image(uploaded_file, caption="Preview", use_column_width=True)
-    
-    # Chat input
-    st.markdown("---")
-    
-    # Use example query if selected
-    default_value = ""
-    if "selected_example" in st.session_state:
-        default_value = st.session_state.selected_example
-        del st.session_state.selected_example
-    
-    user_input = st.chat_input(
-        "Type your question or request here... (e.g., 'Is this X-ray normal?' or 'What causes pneumothorax?')",
-        key="chat_input"
-    )
-    
-    # If example was clicked, use it
-    if default_value and not user_input:
-        user_input = default_value
-    
-    # Process input
-    if user_input:
+
+    # We use a form to handle the file upload and text input together
+    with st.form(key="chat_form", clear_on_submit=True):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            user_input = st.text_input(
+                "Type your question or request here...",
+                value="",
+                placeholder="Ask about an X-ray or a medical topic...",
+                label_visibility="collapsed"
+            )
+        with col2:
+            uploaded_file = st.file_uploader(
+                "Upload CXR",
+                type=['png', 'jpg', 'jpeg', 'dcm'],
+                label_visibility="collapsed",
+                key="file_uploader_form"
+            )
+        
+        submit_button = st.form_submit_button(label='Send')
+
+    # Process input when form is submitted
+    if submit_button and (user_input or uploaded_file):
         # Save uploaded image temporarily
         temp_image_path = None
         if uploaded_file:
-            temp_image_path = f"temp_upload_{uploaded_file.name}"
+            # Ensure temp directory exists
+            if not os.path.exists("temp"):
+                os.makedirs("temp")
+            temp_image_path = os.path.join("temp", f"upload_{uploaded_file.name}")
             with open(temp_image_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
         
-        # Add user message
+        # Add user message to chat history
         st.session_state.messages.append({
             "role": "user",
-            "content": user_input,
+            "content": user_input or "Analyzing uploaded image...",
             "image_path": temp_image_path
         })
         
-        # Display user message immediately
-        with st.spinner("🤔 Analyzing..."):
-            try:
-                # Process with unified agent
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                response = loop.run_until_complete(
-                    st.session_state.agent.process_message(
-                        query=user_input,
-                        image_path=temp_image_path
+        # Rerun to display the user's message immediately
+        st.rerun()
+
+    # Check if the last message was from the user and needs processing
+    if st.session_state.messages and st.session_state.messages[-1]["role"] == "user" and "content" in st.session_state.messages[-1]:
+        last_message = st.session_state.messages[-1]
+        
+        # A simple flag to prevent re-processing
+        if not last_message.get("processed", False):
+            query = last_message["content"]
+            image_path = last_message.get("image_path")
+
+            with st.spinner("🤔 Analyzing..."):
+                try:
+                    # Process with unified agent
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    response = loop.run_until_complete(
+                        st.session_state.agent.process_message(
+                            query=query,
+                            image_path=image_path
+                        )
                     )
-                )
-                loop.close()
-                
-                # Add assistant response
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": response
-                })
-                
-                # Clean up temp file
-                if temp_image_path and os.path.exists(temp_image_path):
-                    try:
-                        os.remove(temp_image_path)
-                    except:
-                        pass
-                
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
-                logger.error(f"Processing error: {e}", exc_info=True)
+                    loop.close()
+                    
+                    # Add assistant response
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response
+                    })
+                    
+                    # Mark the user message as processed
+                    st.session_state.messages[-2]["processed"] = True
+                    
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+                    logger.error(f"Processing error: {e}", exc_info=True)
     
     # Footer
     st.markdown("---")

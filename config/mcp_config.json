@@ -19,9 +19,8 @@
     },
     "segmentation": {
       "enabled": true,
-      "checkpoint_path": "weights/segmentation_model.pth",
-      "model_type": "unet",
-      "description": "Lung region segmentation"
+      "model_type": "pspnet",
+      "description": "Chest X-ray segmentation using torchxrayvision PSPNet for 14 anatomical structures"
     },
     "rag": {
       "enabled": true,
@@ -52,8 +51,8 @@
     },
     "feature_extractor": {
       "enabled": true,
-      "model_type": "radiomics",
-      "description": "Quantitative feature extraction"
+      "model_name": "google/medsiglip-448",
+      "description": "Medical image feature extraction using MedSigLIP multimodal embeddings"
     }
   },
   

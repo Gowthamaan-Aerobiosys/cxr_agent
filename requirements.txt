@@ -11,6 +11,12 @@ torch>=2.0.0
 torchvision>=0.15.0
 numpy>=1.21.0
 Pillow>=9.0.0
+transformers>=4.35.0  # For MedSigLIP
+torchxrayvision>=1.2.0  # For PSPNet segmentation
+timm>=0.9.0  # For Swin Transformer models
+opencv-python>=4.8.0  # For image processing
+scipy>=1.9.0  # For scientific computing
+scikit-image>=0.21.0  # For advanced image processing
 
 # RAG & Vector Database
 chromadb>=0.4.0

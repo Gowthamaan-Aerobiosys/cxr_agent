@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import logging
+import numpy as np
 from pathlib import Path
 from PIL import Image
 from typing import Optional
@@ -35,7 +36,8 @@ st.set_page_config(
 )
 
 # Custom CSS for modern UI
-st.markdown("""
+st.markdown(
+    """
 <style>
     /* General body styling */
     body {
@@ -141,7 +143,9 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_resource
@@ -149,7 +153,7 @@ def load_config():
     """Load application configuration"""
     config_path = "config/mcp_config.json"
     if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             return json.load(f)
     else:
         return {
@@ -157,21 +161,21 @@ def load_config():
                 "binary_classifier": {
                     "enabled": True,
                     "checkpoint_path": "weights/binary_classifier.pth",
-                    "model_type": "swin_transformer"
+                    "model_type": "swin_transformer",
                 },
                 "multiclass_classifier": {
                     "enabled": True,
                     "checkpoint_path": "weights/fourteen_class_classifier",
                     "num_classes": 14,
-                    "model_type": "swin_transformer"
+                    "model_type": "swin_transformer",
                 },
                 "rag": {
                     "enabled": True,
                     "vector_db_path": "chroma_db",
-                    "documents_path": "dataset/books"
-                }
+                    "documents_path": "dataset/books",
+                },
             },
-            "device": "cuda"
+            "device": "cuda",
         }
 
 
@@ -180,11 +184,11 @@ def initialize_unified_agent(config):
     """Initialize the unified agent with all capabilities"""
     try:
         st.info("🔄 Initializing AI Assistant... This may take a moment.")
-        
+
         # Initialize document processor and vector store
         processor = DocumentProcessor(chunk_size=1000, chunk_overlap=200)
         vector_store = VectorStore(collection_name="respiratory_care_docs")
-        
+
         # Check if vector store needs population
         stats = vector_store.get_collection_stats()
         if stats["total_documents"] == 0:
@@ -195,30 +199,26 @@ def initialize_unified_agent(config):
                 if chunks:
                     vector_store.add_documents(chunks, batch_size=50)
                     st.success(f"✅ Processed {len(chunks)} document chunks")
-        
+
         # Initialize LLM engine
         rag_config = config["models"]["rag"]
-        
-        # The LLM Engine is now specific to Google Gemini
-        model_name = config["models"]["rag"].get("model_name") or os.getenv("GEMINI_MODEL")
 
-        llm_engine = LLMEngine(
-            model_name=model_name,
-            max_tokens=2048,
-            temperature=0.7
+        # The LLM Engine is now specific to Google Gemini
+        model_name = config["models"]["rag"].get("model_name") or os.getenv(
+            "GEMINI_MODEL"
         )
-        
+
+        llm_engine = LLMEngine(model_name=model_name, max_tokens=2048, temperature=0.7)
+
         # Initialize unified agent
         agent = UnifiedAgent(
-            config=config,
-            llm_engine=llm_engine,
-            vector_store=vector_store
+            config=config, llm_engine=llm_engine, vector_store=vector_store
         )
-        
+
         st.success("✅ AI Assistant ready!")
         logger.info("Unified agent initialized successfully")
         return agent
-        
+
     except Exception as e:
         st.error(f"❌ Error initializing agent: {str(e)}")
         logger.error(f"Initialization error: {e}", exc_info=True)
@@ -227,51 +227,127 @@ def initialize_unified_agent(config):
 
 def display_image_analysis(analysis: dict):
     """Display image analysis results in a compact format"""
-    
+
     # Binary classification
     if "binary" in analysis and analysis["binary"]:
         binary = analysis["binary"]
         prediction = binary.get("prediction", "Unknown")
         confidence = binary.get("confidence", 0)
-        
+
         if prediction == "Normal":
-            st.markdown(f"""
+            st.markdown(
+                f"""
                 <div class="analysis-box">
                     <strong>✓ Classification:</strong> {prediction} ({confidence:.1%} confidence)
                 </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         else:
-            st.markdown(f"""
+            st.markdown(
+                f"""
                 <div class="disease-box">
                     <strong>⚠ Classification:</strong> {prediction} ({confidence:.1%} confidence)
                 </div>
-            """, unsafe_allow_html=True)
-    
+            """,
+                unsafe_allow_html=True,
+            )
+
     # Disease detection
     if "diseases" in analysis and analysis["diseases"]:
         diseases = analysis["diseases"]
         detected = diseases.get("detected_diseases", {})
-        
+
         if detected:
             disease_list = ", ".join([f"{d} ({p:.1%})" for d, p in detected.items()])
-            st.markdown(f"""
+            st.markdown(
+                f"""
                 <div class="disease-box">
                     <strong>🔍 Detected Pathologies:</strong><br>
                     {disease_list}
                 </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
+
+    # Segmentation results
+    if "segmentation" in analysis and analysis["segmentation"]:
+        seg = analysis["segmentation"]
+        if seg.get("masks_available") and not seg.get("error"):
+            st.markdown("### 🫁 Lung Segmentation")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Left Lung Area", f"{seg.get('lung_area_left', 0):.0f} px²")
+            with col2:
+                st.metric("Right Lung Area", f"{seg.get('lung_area_right', 0):.0f} px²")
+            with col3:
+                st.metric("L/R Ratio", f"{seg.get('lung_ratio', 0):.2f}")
+
+            # Display masks if available
+            if seg.get("combined_mask") is not None:
+                import numpy as np
+                from PIL import Image
+
+                try:
+                    mask = seg["combined_mask"]
+                    if isinstance(mask, np.ndarray):
+                        # Convert mask to displayable image
+                        mask_img = (mask * 255).astype(np.uint8)
+                        st.image(
+                            mask_img,
+                            caption="Lung Segmentation Mask",
+                            use_container_width=True,
+                            clamp=True,
+                        )
+                except Exception as e:
+                    logger.warning(f"Could not display segmentation mask: {e}")
+
+    # Pathology detection results
+    if "pathology_detection" in analysis and analysis["pathology_detection"]:
+        path_det = analysis["pathology_detection"]
+        if not path_det.get("error"):
+            findings = path_det.get("findings", [])
+            if findings:
+                st.markdown("### 🔬 Rule-Based Pathology Detection")
+                st.markdown(f"**Detected {len(findings)} pathologies:**")
+
+                for finding in findings:
+                    with st.expander(
+                        f"🩺 {finding['name']} - {finding['confidence']:.1%} confidence"
+                    ):
+                        st.write(
+                            f"**Severity:** {finding.get('severity', 'unknown').title()}"
+                        )
+
+                        details = finding.get("details", {})
+                        if details:
+                            st.write("**Details:**")
+                            for key, value in details.items():
+                                if isinstance(value, float):
+                                    st.write(f"- {key}: {value:.2f}")
+                                else:
+                                    st.write(f"- {key}: {value}")
+
+    # Feature extraction (just note it was done)
+    if "features" in analysis and analysis["features"]:
+        feat = analysis["features"]
+        if feat.get("features_extracted"):
+            st.info(
+                f"✨ Medical features extracted: {feat.get('feature_dim', 0)}-dimensional vector"
+            )
 
 
 def display_message(message: dict, show_thinking: bool = True):
     """Display a chat message using Streamlit's native chat elements."""
-    
+
     role = message["role"]
     avatar = "👤" if role == "user" else "🤖"
-    
+
     with st.chat_message(role, avatar=avatar):
         # Display content
         st.markdown(f"**{'You' if role == 'user' else 'CXR Agent'}:**")
-        
+
         if role == "user":
             st.markdown(message["content"])
             if message.get("image_path"):
@@ -280,99 +356,117 @@ def display_message(message: dict, show_thinking: bool = True):
                     st.image(image, caption="Uploaded X-ray", width=200, clamp=True)
                 except Exception as e:
                     logger.warning(f"Could not display user image: {e}")
-        
+
         else:  # Assistant
             response = message["content"]
-            
+
             # Show image analysis if present
             if "image_analysis" in response and response["image_analysis"]:
                 display_image_analysis(response["image_analysis"])
-            
+
             # Show thinking process
-            if show_thinking and response.get("has_thinking") and response.get("thinking"):
+            if (
+                show_thinking
+                and response.get("has_thinking")
+                and response.get("thinking")
+            ):
                 with st.expander("🧠 AI Reasoning Process", expanded=False):
-                    thinking_text = response['thinking'].replace('\n', '<br>')
-                    st.markdown(f'<div class="thinking-section">{thinking_text}</div>', unsafe_allow_html=True)
-            
+                    thinking_text = response["thinking"].replace("\n", "<br>")
+                    st.markdown(
+                        f'<div class="thinking-section">{thinking_text}</div>',
+                        unsafe_allow_html=True,
+                    )
+
             # Show main answer
-            st.markdown(response.get('answer', ''))
-            
+            st.markdown(response.get("answer", ""))
+
             # Show sources if available
             if response.get("sources") and len(response["sources"]) > 0:
-                with st.expander(f"📚 Medical References ({len(response['sources'])})", expanded=False):
+                with st.expander(
+                    f"📚 Medical References ({len(response['sources'])})",
+                    expanded=False,
+                ):
                     for i, source in enumerate(response["sources"], 1):
                         relevance = source.get("relevance_score", 0)
-                        st.markdown(f"""
+                        st.markdown(
+                            f"""
                             <div class="source-card">
                                 <strong>Source {i}:</strong> {source['source']}<br>
                                 <strong>Page:</strong> {source['page']}<br>
                                 <strong>Relevance:</strong> {relevance:.1%}
                             </div>
-                        """, unsafe_allow_html=True)
+                        """,
+                            unsafe_allow_html=True,
+                        )
 
 
 def main():
     # Header
-    st.markdown('<h1 class="main-header">🫁 CXR Agent - AI Medical Assistant</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<h1 class="main-header">🫁 CXR Agent - AI Medical Assistant</h1>',
+        unsafe_allow_html=True,
+    )
     st.markdown(
         '<p class="subtitle">Ask questions, upload chest X-rays, get instant AI-powered analysis and insights</p>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
-    
+
     # Load configuration
     config = load_config()
-    
+
     # Sidebar
     with st.sidebar:
         st.header("⚙️ Settings")
-        
+
         # Model selection
-        llm_options = [
-            "gemini-2.5-pro"
-        ]
+        llm_options = ["gemini-2.5-pro"]
         selected_llm = st.selectbox(
             "Language Model:",
             llm_options,
             index=0,
-            help="Choose the AI model for conversation"
+            help="Choose the AI model for conversation",
         )
-        
+
         if selected_llm != config["models"]["rag"]["model_name"]:
             config["models"]["rag"]["model_name"] = selected_llm
             st.cache_resource.clear()
             st.rerun()
-        
+
         st.markdown(f"**Active Model:** {selected_llm.split('/')[-1]}")
         st.markdown(f"**Device:** {config.get('device', 'cuda')}")
-        
+
         st.markdown("---")
-        
+
         # Capabilities
         st.header("🎯 Capabilities")
-        st.markdown("""
+        st.markdown(
+            """
         **I can help you with:**
         - 🖼️ Analyze chest X-rays
         - 🔍 Detect diseases and abnormalities
         - 📚 Answer medical questions
         - 💡 Explain clinical findings
         - 📊 Provide evidence-based insights
-        """)
-        
+        """
+        )
+
         st.markdown("---")
-    
+
     # Initialize agent
     if "agent" not in st.session_state:
         agent = initialize_unified_agent(config)
         st.session_state.agent = agent
-    
+
     if st.session_state.agent is None:
-        st.error("❌ Failed to initialize AI Assistant. Please check configuration and try again.")
+        st.error(
+            "❌ Failed to initialize AI Assistant. Please check configuration and try again."
+        )
         return
-    
+
     # Initialize messages
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    
+
     # Display chat history
     for message in st.session_state.messages:
         display_message(message)
@@ -388,17 +482,17 @@ def main():
                 "Type your question or request here...",
                 value="",
                 placeholder="Ask about an X-ray or a medical topic...",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
             )
         with col2:
             uploaded_file = st.file_uploader(
                 "Upload CXR",
-                type=['png', 'jpg', 'jpeg', 'dcm'],
+                type=["png", "jpg", "jpeg", "dcm"],
                 label_visibility="collapsed",
-                key="file_uploader_form"
+                key="file_uploader_form",
             )
-        
-        submit_button = st.form_submit_button(label='Send')
+
+        submit_button = st.form_submit_button(label="Send")
 
     # Process input when form is submitted
     if submit_button and (user_input or uploaded_file):
@@ -411,21 +505,27 @@ def main():
             temp_image_path = os.path.join("temp", f"upload_{uploaded_file.name}")
             with open(temp_image_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
-        
+
         # Add user message to chat history
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input or "Analyzing uploaded image...",
-            "image_path": temp_image_path
-        })
-        
+        st.session_state.messages.append(
+            {
+                "role": "user",
+                "content": user_input or "Analyzing uploaded image...",
+                "image_path": temp_image_path,
+            }
+        )
+
         # Rerun to display the user's message immediately
         st.rerun()
 
     # Check if the last message was from the user and needs processing
-    if st.session_state.messages and st.session_state.messages[-1]["role"] == "user" and "content" in st.session_state.messages[-1]:
+    if (
+        st.session_state.messages
+        and st.session_state.messages[-1]["role"] == "user"
+        and "content" in st.session_state.messages[-1]
+    ):
         last_message = st.session_state.messages[-1]
-        
+
         # A simple flag to prevent re-processing
         if not last_message.get("processed", False):
             query = last_message["content"]
@@ -438,35 +538,36 @@ def main():
                     asyncio.set_event_loop(loop)
                     response = loop.run_until_complete(
                         st.session_state.agent.process_message(
-                            query=query,
-                            image_path=image_path
+                            query=query, image_path=image_path
                         )
                     )
                     loop.close()
-                    
+
                     # Add assistant response
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": response
-                    })
-                    
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": response}
+                    )
+
                     # Mark the user message as processed
                     st.session_state.messages[-2]["processed"] = True
-                    
+
                     st.rerun()
-                    
+
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
                     logger.error(f"Processing error: {e}", exc_info=True)
-    
+
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
         <div style="text-align: center; color: #666; font-size: 0.9rem; margin-top: 2rem;">
             <strong>⚠️ Medical Disclaimer:</strong> This AI provides educational information only.
             Always consult qualified healthcare professionals for medical decisions.
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":
